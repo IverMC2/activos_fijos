@@ -1,0 +1,236 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Rol {
+  ADMIN
+  CONTABILIDAD
+  CONSULTA
+}
+
+enum EstadoActivo {
+  ACTIVO
+  EN_MANTENIMIENTO
+  DADO_DE_BAJA
+}
+
+enum MetodoDepreciacion {
+  LINEAL
+  ACELERADO
+}
+
+enum TipoDocumento {
+  FACTURA
+  FOTO
+  GARANTIA
+  OTRO
+}
+
+enum TipoMantenimiento {
+  PREVENTIVO
+  CORRECTIVO
+}
+
+enum MotivoBaja {
+  VENTA
+  DETERIORO
+  ROBO
+  OBSOLESCENCIA
+}
+
+model Departamento {
+  id        String      @id @default(cuid())
+  nombre    String      @unique
+  ciudad    String?
+  creadoEn  DateTime    @default(now())
+
+  usuarios    Usuario[]
+  ubicaciones Ubicacion[]
+
+  @@map("departamentos")
+}
+
+model Usuario {
+  id             String        @id @default(cuid())
+  nombre         String
+  email          String        @unique
+  passwordHash   String
+  rol            Rol           @default(CONSULTA)
+  activo         Boolean       @default(true)
+  departamentoId String?
+  departamento   Departamento? @relation(fields: [departamentoId], references: [id])
+  creadoEn       DateTime      @default(now())
+
+  activosResponsable Activo[]   @relation("ResponsableActivo")
+  traslados          Traslado[] @relation("ResponsableTraslado")
+  bitacoras          Bitacora[]
+
+  @@map("usuarios")
+}
+
+model Categoria {
+  id             String   @id @default(cuid())
+  nombre         String   @unique
+  vidaUtilAnios  Int
+  cuentaContable String?
+  creadoEn       DateTime @default(now())
+
+  activos Activo[]
+
+  @@map("categorias")
+}
+
+model Ubicacion {
+  id             String        @id @default(cuid())
+  nombre         String
+  tipo           String
+  parentId       String?
+  departamentoId String?
+  departamento   Departamento? @relation(fields: [departamentoId], references: [id])
+  creadoEn       DateTime      @default(now())
+
+  padre           Ubicacion?  @relation("UbicacionHijos", fields: [parentId], references: [id])
+  hijos           Ubicacion[] @relation("UbicacionHijos")
+  activos         Activo[]
+  trasladosOrigen Traslado[]
+
+  @@map("ubicaciones")
+}
+
+model Proveedor {
+  id       String   @id @default(cuid())
+  nombre   String
+  nit      String?
+  telefono String?
+  email    String?
+  creadoEn DateTime @default(now())
+
+  activos        Activo[]
+  mantenimientos Mantenimiento[]
+
+  @@map("proveedores")
+}
+
+model Activo {
+  id                  String              @id @default(cuid())
+  codigo              String              @unique
+  nombre              String
+  descripcion         String?
+  marca               String?
+  modelo              String?
+  numeroSerie         String?
+  fechaCompra         DateTime
+  numeroFactura       String?
+  costoAdquisicion    Decimal             @db.Decimal(12, 2)
+  valorResidual       Decimal             @default(0) @db.Decimal(12, 2)
+  valorLibro          Decimal             @db.Decimal(12, 2)
+  vidaUtilAnios       Int
+  metodoDepreciacion  MetodoDepreciacion  @default(LINEAL)
+  estado              EstadoActivo        @default(ACTIVO)
+  categoriaId         String
+  categoria           Categoria           @relation(fields: [categoriaId], references: [id])
+  ubicacionId         String
+  ubicacion           Ubicacion           @relation(fields: [ubicacionId], references: [id])
+  responsableId       String?
+  responsable         Usuario?            @relation("ResponsableActivo", fields: [responsableId], references: [id])
+  proveedorId         String?
+  proveedor           Proveedor?          @relation(fields: [proveedorId], references: [id])
+  creadoEn            DateTime            @default(now())
+  actualizadoEn       DateTime            @updatedAt
+
+  documentos      Documento[]
+  depreciaciones  Depreciacion[]
+  mantenimientos  Mantenimiento[]
+  traslados       Traslado[]
+  baja            Baja?
+
+  @@map("activos")
+}
+
+model Documento {
+  id        String         @id @default(cuid())
+  activoId  String
+  activo    Activo         @relation(fields: [activoId], references: [id], onDelete: Cascade)
+  tipo      TipoDocumento
+  nombre    String
+  url       String
+  tamanio   Int?
+  creadoEn  DateTime       @default(now())
+
+  @@map("documentos")
+}
+
+model Depreciacion {
+  id               String   @id @default(cuid())
+  activoId         String
+  activo           Activo   @relation(fields: [activoId], references: [id], onDelete: Cascade)
+  mes              Int
+  anio             Int
+  cuotaMensual     Decimal  @db.Decimal(12, 2)
+  depreciacionAcum Decimal  @db.Decimal(12, 2)
+  valorLibro       Decimal  @db.Decimal(12, 2)
+  creadoEn         DateTime @default(now())
+
+  @@unique([activoId, mes, anio])
+  @@map("depreciaciones")
+}
+
+model Mantenimiento {
+  id            String              @id @default(cuid())
+  activoId      String
+  activo        Activo              @relation(fields: [activoId], references: [id], onDelete: Cascade)
+  tipo          TipoMantenimiento
+  descripcion   String
+  costo         Decimal?            @db.Decimal(12, 2)
+  fecha         DateTime
+  proximaFecha  DateTime?
+  proveedorId   String?
+  proveedor     Proveedor?          @relation(fields: [proveedorId], references: [id])
+  creadoEn      DateTime            @default(now())
+
+  @@map("mantenimientos")
+}
+
+model Traslado {
+  id                  String    @id @default(cuid())
+  activoId            String
+  activo              Activo    @relation(fields: [activoId], references: [id], onDelete: Cascade)
+  ubicacionOrigenId   String
+  ubicacionOrigen     Ubicacion @relation(fields: [ubicacionOrigenId], references: [id])
+  responsableId       String?
+  responsable         Usuario?  @relation("ResponsableTraslado", fields: [responsableId], references: [id])
+  motivo              String?
+  fecha               DateTime  @default(now())
+
+  @@map("traslados")
+}
+
+model Baja {
+  id          String      @id @default(cuid())
+  activoId    String      @unique
+  activo      Activo      @relation(fields: [activoId], references: [id], onDelete: Cascade)
+  motivo      MotivoBaja
+  descripcion String?
+  valorBaja   Decimal     @db.Decimal(12, 2)
+  fecha       DateTime    @default(now())
+
+  @@map("bajas")
+}
+
+model Bitacora {
+  id        String   @id @default(cuid())
+  accion    String
+  tabla     String
+  registroId String?
+  usuarioId String?
+  usuario   Usuario? @relation(fields: [usuarioId], references: [id])
+  datos     String?
+  fecha     DateTime @default(now())
+
+  @@map("bitacoras")
+}
