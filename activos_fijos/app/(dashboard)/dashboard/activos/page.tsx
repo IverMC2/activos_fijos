@@ -70,12 +70,17 @@ export default function ActivosPage() {
 
   function updateParam(key: string, value: string) {
     const params = new URLSearchParams(searchParams.toString())
+    
     if (value && value !== "todos") {
       params.set(key, value)
     } else {
       params.delete(key)
     }
-    params.delete("page")
+    if (key!=="page") {
+      params.delete("page")
+      
+    }
+    
     router.push(`${pathname}?${params.toString()}`)
   }
 
