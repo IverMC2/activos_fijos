@@ -1,3 +1,12 @@
+# Notas
+
+## 21 de febrero
+
+- Se agrego un seeder para la base de datos
+- No funciona el agregar de mantenimiento
+- Se arreglo para la paginacion de app/(dashboard)/dashboard/activos/page.tsx
+
+
 Roles y permisos
 ADMIN — Administrador General
 

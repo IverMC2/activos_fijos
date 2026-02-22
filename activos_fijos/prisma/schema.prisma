@@ -44,10 +44,10 @@ enum MotivoBaja {
 }
 
 model Departamento {
-  id        String      @id @default(cuid())
-  nombre    String      @unique
-  ciudad    String?
-  creadoEn  DateTime    @default(now())
+  id       String   @id @default(cuid())
+  nombre   String   @unique
+  ciudad   String?
+  creadoEn DateTime @default(now())
 
   usuarios    Usuario[]
   ubicaciones Ubicacion[]
@@ -117,50 +117,50 @@ model Proveedor {
 }
 
 model Activo {
-  id                  String              @id @default(cuid())
-  codigo              String              @unique
-  nombre              String
-  descripcion         String?
-  marca               String?
-  modelo              String?
-  numeroSerie         String?
-  fechaCompra         DateTime
-  numeroFactura       String?
-  costoAdquisicion    Decimal             @db.Decimal(12, 2)
-  valorResidual       Decimal             @default(0) @db.Decimal(12, 2)
-  valorLibro          Decimal             @db.Decimal(12, 2)
-  vidaUtilAnios       Int
-  metodoDepreciacion  MetodoDepreciacion  @default(LINEAL)
-  estado              EstadoActivo        @default(ACTIVO)
-  categoriaId         String
-  categoria           Categoria           @relation(fields: [categoriaId], references: [id])
-  ubicacionId         String
-  ubicacion           Ubicacion           @relation(fields: [ubicacionId], references: [id])
-  responsableId       String?
-  responsable         Usuario?            @relation("ResponsableActivo", fields: [responsableId], references: [id])
-  proveedorId         String?
-  proveedor           Proveedor?          @relation(fields: [proveedorId], references: [id])
-  creadoEn            DateTime            @default(now())
-  actualizadoEn       DateTime            @updatedAt
+  id                 String             @id @default(cuid())
+  codigo             String             @unique
+  nombre             String
+  descripcion        String?
+  marca              String?
+  modelo             String?
+  numeroSerie        String?
+  fechaCompra        DateTime
+  numeroFactura      String?
+  costoAdquisicion   Decimal            @db.Decimal(12, 2)
+  valorResidual      Decimal            @default(0) @db.Decimal(12, 2)
+  valorLibro         Decimal            @db.Decimal(12, 2)
+  vidaUtilAnios      Int
+  metodoDepreciacion MetodoDepreciacion @default(LINEAL)
+  estado             EstadoActivo       @default(ACTIVO)
+  categoriaId        String
+  categoria          Categoria          @relation(fields: [categoriaId], references: [id])
+  ubicacionId        String
+  ubicacion          Ubicacion          @relation(fields: [ubicacionId], references: [id])
+  responsableId      String?
+  responsable        Usuario?           @relation("ResponsableActivo", fields: [responsableId], references: [id])
+  proveedorId        String?
+  proveedor          Proveedor?         @relation(fields: [proveedorId], references: [id])
+  creadoEn           DateTime           @default(now())
+  actualizadoEn      DateTime           @updatedAt
 
-  documentos      Documento[]
-  depreciaciones  Depreciacion[]
-  mantenimientos  Mantenimiento[]
-  traslados       Traslado[]
-  baja            Baja?
+  documentos     Documento[]
+  depreciaciones Depreciacion[]
+  mantenimientos Mantenimiento[]
+  traslados      Traslado[]
+  baja           Baja?
 
   @@map("activos")
 }
 
 model Documento {
-  id        String         @id @default(cuid())
-  activoId  String
-  activo    Activo         @relation(fields: [activoId], references: [id], onDelete: Cascade)
-  tipo      TipoDocumento
-  nombre    String
-  url       String
-  tamanio   Int?
-  creadoEn  DateTime       @default(now())
+  id       String        @id @default(cuid())
+  activoId String
+  activo   Activo        @relation(fields: [activoId], references: [id], onDelete: Cascade)
+  tipo     TipoDocumento
+  nombre   String
+  url      String
+  tamanio  Int?
+  creadoEn DateTime      @default(now())
 
   @@map("documentos")
 }
@@ -181,56 +181,56 @@ model Depreciacion {
 }
 
 model Mantenimiento {
-  id            String              @id @default(cuid())
-  activoId      String
-  activo        Activo              @relation(fields: [activoId], references: [id], onDelete: Cascade)
-  tipo          TipoMantenimiento
-  descripcion   String
-  costo         Decimal?            @db.Decimal(12, 2)
-  fecha         DateTime
-  proximaFecha  DateTime?
-  proveedorId   String?
-  proveedor     Proveedor?          @relation(fields: [proveedorId], references: [id])
-  creadoEn      DateTime            @default(now())
+  id           String            @id @default(cuid())
+  activoId     String
+  activo       Activo            @relation(fields: [activoId], references: [id], onDelete: Cascade)
+  tipo         TipoMantenimiento
+  descripcion  String
+  costo        Decimal?          @db.Decimal(12, 2)
+  fecha        DateTime
+  proximaFecha DateTime?
+  proveedorId  String?
+  proveedor    Proveedor?        @relation(fields: [proveedorId], references: [id])
+  creadoEn     DateTime          @default(now())
 
   @@map("mantenimientos")
 }
 
 model Traslado {
-  id                  String    @id @default(cuid())
-  activoId            String
-  activo              Activo    @relation(fields: [activoId], references: [id], onDelete: Cascade)
-  ubicacionOrigenId   String
-  ubicacionOrigen     Ubicacion @relation(fields: [ubicacionOrigenId], references: [id])
-  responsableId       String?
-  responsable         Usuario?  @relation("ResponsableTraslado", fields: [responsableId], references: [id])
-  motivo              String?
-  fecha               DateTime  @default(now())
+  id                String    @id @default(cuid())
+  activoId          String
+  activo            Activo    @relation(fields: [activoId], references: [id], onDelete: Cascade)
+  ubicacionOrigenId String
+  ubicacionOrigen   Ubicacion @relation(fields: [ubicacionOrigenId], references: [id])
+  responsableId     String?
+  responsable       Usuario?  @relation("ResponsableTraslado", fields: [responsableId], references: [id])
+  motivo            String?
+  fecha             DateTime  @default(now())
 
   @@map("traslados")
 }
 
 model Baja {
-  id          String      @id @default(cuid())
-  activoId    String      @unique
-  activo      Activo      @relation(fields: [activoId], references: [id], onDelete: Cascade)
+  id          String     @id @default(cuid())
+  activoId    String     @unique
+  activo      Activo     @relation(fields: [activoId], references: [id], onDelete: Cascade)
   motivo      MotivoBaja
   descripcion String?
-  valorBaja   Decimal     @db.Decimal(12, 2)
-  fecha       DateTime    @default(now())
+  valorBaja   Decimal    @db.Decimal(12, 2)
+  fecha       DateTime   @default(now())
 
   @@map("bajas")
 }
 
 model Bitacora {
-  id        String   @id @default(cuid())
-  accion    String
-  tabla     String
+  id         String   @id @default(cuid())
+  accion     String
+  tabla      String
   registroId String?
-  usuarioId String?
-  usuario   Usuario? @relation(fields: [usuarioId], references: [id])
-  datos     String?
-  fecha     DateTime @default(now())
+  usuarioId  String?
+  usuario    Usuario? @relation(fields: [usuarioId], references: [id])
+  datos      String?
+  fecha      DateTime @default(now())
 
   @@map("bitacoras")
 }
