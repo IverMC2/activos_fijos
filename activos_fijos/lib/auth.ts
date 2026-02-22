@@ -46,21 +46,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const { email, password } = parsed.data
 
-const usuario = await prisma.usuario.findUnique({
-  where: { email, activo: true },
-})
+        const usuario = await prisma.usuario.findUnique({
+          where: { email, activo: true },
+        })
         if (!usuario) return null
 
-const passwordMatch = await bcrypt.compare(password, usuario.passwordHash)
-if (!passwordMatch) return null
+        const passwordMatch = await bcrypt.compare(password, usuario.passwordHash)
+        if (!passwordMatch) return null
 
-return {
-  id: usuario.id,
-  name: usuario.nombre,
-  email: usuario.email,
-  rol: usuario.rol,
-  departamentoId: usuario.departamentoId,
-}
+        return {
+          id: usuario.id,
+          name: usuario.nombre,
+          email: usuario.email,
+          rol: usuario.rol,
+          departamentoId: usuario.departamentoId,
+        }
       },
     }),
   ],

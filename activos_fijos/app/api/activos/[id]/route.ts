@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { obtenerActivoPorId, actualizarActivo, darDeBajaActivo } from "@/lib/services/activos.service"
 import { auth } from "@/lib/auth"
+import { hasPermission } from "@/lib/permission"
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
@@ -16,7 +17,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
-  if (session.user.rol === "CONSULTA") return NextResponse.json({ error: "Sin permisos" }, { status: 403 })
+
+  if (!hasPermission(session.user.rol, "activo:update")) {
+    return NextResponse.json({ error: "Sin permisos" }, { status: 403 })
+  }
 
   const { id } = await params
   const body = await req.json()
@@ -29,11 +33,15 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
-  if (session.user.rol === "CONSULTA") return NextResponse.json({ error: "Sin permisos" }, { status: 403 })
 
+  if (!hasPermission(session.user.rol, "activo:delete")) {
+    return NextResponse.json({ error: "Sin permisos" }, { status: 403 })
+  }
   const { id } = await params
   const body = await req.json()
   const resultado = await darDeBajaActivo(id, body)
-
+  if (resultado.error) {
+    return NextResponse.json(resultado, { status: 400 })
+  }
   return NextResponse.json(resultado)
 }

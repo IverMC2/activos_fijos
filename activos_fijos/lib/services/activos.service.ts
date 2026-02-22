@@ -19,6 +19,12 @@ export const activoSchema = z.object({
   proveedorId: z.string().optional(),
 })
 
+export const deleteSchema = z.object({
+  motivo: z.enum(["VENTA", "DETERIORO", "ROBO", "OBSOLESCENCIA"]),
+  descripcion: z.string().optional(),
+  valorBaja: z.coerce.number().min(0, "Debe ser mayor o igual a 0")
+})
+
 export type ActivoInput = z.infer<typeof activoSchema>
 
 function generarCodigo(): string {
@@ -134,85 +140,79 @@ export async function crearActivo(data: unknown) {
     existe = await prisma.activo.findUnique({ where: { codigo } })
   }
   const activo = await prisma.activo.create({
-  data: {
-    codigo,
-    nombre: d.nombre,
-    descripcion: d.descripcion,
-    marca: d.marca,
-    modelo: d.modelo,
-    numeroSerie: d.numeroSerie,
-    fechaCompra: new Date(d.fechaCompra),
-    numeroFactura: d.numeroFactura,
-    costoAdquisicion: d.costoAdquisicion,
-    valorResidual: d.valorResidual,
-    vidaUtilAnios: d.vidaUtilAnios,
-    metodoDepreciacion: d.metodoDepreciacion,
-    valorLibro: d.costoAdquisicion,
-    categoriaId: d.categoriaId,
-    ubicacionId: d.ubicacionId,
-    responsableId: d.responsableId || null,
-    proveedorId: d.proveedorId || null,
-  },
-})
+    data: {
+      codigo,
+      nombre: d.nombre,
+      descripcion: d.descripcion,
+      marca: d.marca,
+      modelo: d.modelo,
+      numeroSerie: d.numeroSerie,
+      fechaCompra: new Date(d.fechaCompra),
+      numeroFactura: d.numeroFactura,
+      costoAdquisicion: d.costoAdquisicion,
+      valorResidual: d.valorResidual,
+      vidaUtilAnios: d.vidaUtilAnios,
+      metodoDepreciacion: d.metodoDepreciacion,
+      valorLibro: d.costoAdquisicion,
+      categoriaId: d.categoriaId,
+      ubicacionId: d.ubicacionId,
+      responsableId: d.responsableId || null,
+      proveedorId: d.proveedorId || null,
+    },
+  })
 
-// ── Calcular depreciación histórica si la fecha de compra es pasada ──
-const hoy = new Date()
-const fechaCompraDate = new Date(d.fechaCompra)
-const mesesTranscurridos =
-  (hoy.getFullYear() - fechaCompraDate.getFullYear()) * 12 +
-  (hoy.getMonth() - fechaCompraDate.getMonth())
+  // ── Calcular depreciación histórica si la fecha de compra es pasada ──
+  const hoy = new Date()
+  const fechaCompraDate = new Date(d.fechaCompra)
+  const mesesTranscurridos =
+    (hoy.getFullYear() - fechaCompraDate.getFullYear()) * 12 +
+    (hoy.getMonth() - fechaCompraDate.getMonth())
 
-if (mesesTranscurridos > 0) {
-  const vidaMeses = d.vidaUtilAnios * 12
-  const costo = d.costoAdquisicion
-  const residual = d.valorResidual ?? 0
-  const cuotaMensual = (costo - residual) / vidaMeses
+  if (mesesTranscurridos > 0) {
+    const vidaMeses = d.vidaUtilAnios * 12
+    const costo = d.costoAdquisicion
+    const residual = d.valorResidual ?? 0
+    const cuotaMensual = (costo - residual) / vidaMeses
 
-  let valorLibroActual = costo
-  const depreciaciones = []
+    let valorLibroActual = costo
+    const depreciaciones = []
 
-  for (let i = 0; i < Math.min(mesesTranscurridos, vidaMeses); i++) {
-    const fecha = new Date(fechaCompraDate)
-    fecha.setMonth(fecha.getMonth() + i + 1)
+    for (let i = 0; i < Math.min(mesesTranscurridos, vidaMeses); i++) {
+      const fecha = new Date(fechaCompraDate)
+      fecha.setMonth(fecha.getMonth() + i + 1)
 
-    const cuota = Math.min(cuotaMensual, valorLibroActual - residual)
-    if (cuota <= 0) break
+      const cuota = Math.min(cuotaMensual, valorLibroActual - residual)
+      if (cuota <= 0) break
 
-    valorLibroActual = valorLibroActual - cuota
-    const depreciacionAcum = costo - valorLibroActual
+      valorLibroActual = valorLibroActual - cuota
+      const depreciacionAcum = costo - valorLibroActual
 
-    depreciaciones.push({
-      activoId: activo.id,
-      mes: fecha.getMonth() + 1,
-      anio: fecha.getFullYear(),
-      cuotaMensual: cuota,
-      depreciacionAcum,
-      valorLibro: valorLibroActual,
-    })
+      depreciaciones.push({
+        activoId: activo.id,
+        mes: fecha.getMonth() + 1,
+        anio: fecha.getFullYear(),
+        cuotaMensual: cuota,
+        depreciacionAcum,
+        valorLibro: valorLibroActual,
+      })
+    }
+
+    if (depreciaciones.length > 0) {
+      await prisma.$transaction([
+        prisma.depreciacion.createMany({
+          data: depreciaciones,
+          skipDuplicates: true,
+        }),
+        prisma.activo.update({
+          where: { id: activo.id },
+          data: { valorLibro: valorLibroActual },
+        }),
+      ])
+    }
   }
 
-  if (depreciaciones.length > 0) {
-  await prisma.$transaction([
-    prisma.depreciacion.createMany({ 
-      data: depreciaciones,
-      skipDuplicates: true,
-    }),
-    prisma.activo.update({
-      where: { id: activo.id },
-      data: { valorLibro: valorLibroActual },
-    }),
-  ])
+  return { success: true, activo }
 }
-}
-
-return { success: true, activo }
-}
-
-
-
-
-
-
 
 export async function actualizarActivo(id: string, data: unknown) {
   const parsed = activoSchema.safeParse(data)
@@ -251,6 +251,11 @@ export async function darDeBajaActivo(id: string, data: {
   descripcion?: string
   valorBaja: number
 }) {
+  const parsed = deleteSchema.safeParse(data);
+  if (!parsed.success) {
+    return { error: parsed.error.flatten().fieldErrors }
+  }
+
   await prisma.$transaction([
     prisma.activo.update({
       where: { id },
