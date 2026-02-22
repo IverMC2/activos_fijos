@@ -47,12 +47,20 @@ export const ROLE_PERMISSIONS: Record<Role, string[]> = {
     PERMISSIONS.TRANSFERENCIA_CREATE_OWN,
     PERMISSIONS.MANTENIMIENTO_CREATE_OWN,
 
+    PERMISSIONS.UBICACION_READ_OWN,
+
+    //?K Deberia leerse a los usuarios de sus propios departamentos?
+    PERMISSIONS.USUARIO_READ_OWN,
+
     PERMISSIONS.REPORTE_READ_OWN,
   ],
 
   CONSULTA: [
     PERMISSIONS.ACTIVO_READ_OWN,
-    PERMISSIONS.REPORTE_READ_OWN
+    PERMISSIONS.REPORTE_READ_OWN,
+
+    //?K Deberia leerse a los usuarios de sus propios departamentos?
+    PERMISSIONS.USUARIO_READ_OWN, 
   ],
 }
 
