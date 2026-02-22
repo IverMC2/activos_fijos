@@ -273,3 +273,34 @@ export async function darDeBajaActivo(id: string, data: {
 
   return { success: true }
 }
+
+export async function getActivoWithDepartamento(id: string) {
+  const activo = await prisma.activo.findUnique({
+    where: { id },
+    include: {
+      ubicacion: {
+        select: {
+          departamentoId: true
+        }
+      }
+    }
+  })
+
+  if (!activo) return null
+
+  return {
+    ...activo,
+    departamentoId: activo.ubicacion.departamentoId
+  }
+}
+
+export async function getDepartamentoIdFromUbicacion(ubicacionId: string) {
+  const ubicacion = await prisma.ubicacion.findUnique({
+    where: { id: ubicacionId },
+    select: {
+      departamentoId: true
+    }
+  })
+
+  return ubicacion?.departamentoId ?? null
+}

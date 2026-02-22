@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { obtenerActivos, crearActivo } from "@/lib/services/activos.service";
+import { obtenerActivos, crearActivo, ActivoInput, getDepartamentoIdFromUbicacion } from "@/lib/services/activos.service";
 import { auth } from "@/lib/auth";
-import { hasPermission } from "@/lib/permission";
+import { hasPermission } from "@/lib/role";
+import { canCreateActivo, getReadDepartamentoFilter } from "@/lib/policies/activo.policy";
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session)
@@ -13,12 +14,14 @@ export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
 
   // Si no es ADMIN, filtrar por su departamento
-  const departamentoId = hasPermission(
-    session.user.rol,
-    "activo:read:departamento",
-  )
-    ? (session.user.departamentoId ?? undefined)
-    : (searchParams.get("departamentoId") ?? undefined);
+  const departamentoId = getReadDepartamentoFilter(
+    session,
+    searchParams.get("departamentoId") ?? undefined
+  );
+
+  if (departamentoId === null) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   console.log("DEPT FILTER:", departamentoId);
 
@@ -42,12 +45,13 @@ export async function POST(req: NextRequest) {
   if (!session)
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-  
+  const body: ActivoInput = await req.json();
 
-  if (!hasPermission(session.user.rol, "activo:create")) {
+  const departamentoId = await getDepartamentoIdFromUbicacion(body.ubicacionId)
+
+  if (!departamentoId || !canCreateActivo(session, departamentoId)) {
     return NextResponse.json({ error: "Prohibido" }, { status: 403 });
   }
-  const body = await req.json();
   const resultado = await crearActivo(body);
 
   if (resultado.error) return NextResponse.json(resultado, { status: 400 });
