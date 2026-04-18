@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 import { z } from "zod"
+import { canDeleteUsuario, canUpdateUsuario } from "@/lib/policies/usuarios.policy"
 
 const schema = z.object({
   nombre: z.string().min(1),
@@ -14,22 +15,46 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const session = await auth()
   if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
   if (session.user.rol !== "ADMIN") return NextResponse.json({ error: "Sin permisos" }, { status: 403 })
-
+  if (!canUpdateUsuario(session)) {
+    return NextResponse.json({ error: "Sin permisos" }, { status: 403 })
+  }
   const { id } = await params
   const body = await req.json()
   const parsed = schema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 400 })
 
+  const existingUser = await prisma.usuario.findUnique({
+    where: { id: id }
+  })
+
+  if (!existingUser) {
+    return NextResponse.json(
+      { message: "El usuario no existe" },
+      { status: 404 }
+    );
+  }
+
+  const emailUnique = await prisma.usuario.findUnique({
+    where: { email: parsed.data.email }
+  }).then(datos => { return datos?.email })
+
+  if (emailUnique && emailUnique!==existingUser.email) {
+    return NextResponse.json(
+      { message: "El email ya esta en uso" },
+      { status: 409 }
+    );
+  }
+
   const usuario = await prisma.usuario.update({
-  where: { id },
-  data: {
-    nombre: parsed.data.nombre,
-    email: parsed.data.email,
-    rol: parsed.data.rol,
-    departamentoId: parsed.data.departamentoId === "none" ? null : parsed.data.departamentoId || null,
-  },
-  select: { id: true, nombre: true, email: true, rol: true, departamentoId: true },
-})
+    where: { id },
+    data: {
+      nombre: parsed.data.nombre,
+      email: parsed.data.email,
+      rol: parsed.data.rol,
+      departamentoId: parsed.data.departamentoId === "none" ? null : parsed.data.departamentoId || null,
+    },
+    select: { id: true, nombre: true, email: true, rol: true, departamentoId: true },
+  })
 
   return NextResponse.json(usuario)
 }
@@ -37,9 +62,23 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
-  if (session.user.rol !== "ADMIN") return NextResponse.json({ error: "Sin permisos" }, { status: 403 })
+  // if (session.user.rol !== "ADMIN") return NextResponse.json({ error: "Sin permisos" }, { status: 403 })
+  if (!canDeleteUsuario(session)) {
+    return NextResponse.json({ error: "Sin permisos" }, { status: 403 })
+  }
 
   const { id } = await params
+
+  const existingUser = await prisma.usuario.findUnique({
+    where: { id: id }
+  })
+
+  if (!existingUser) {
+    return NextResponse.json(
+      { message: "El usuario no existe" },
+      { status: 404 }
+    );
+  }
 
   await prisma.usuario.update({
     where: { id },

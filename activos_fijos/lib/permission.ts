@@ -13,6 +13,10 @@ export const PERMISSIONS = {
 
 
   UBICACION_READ_ANY: "ubicacion:read:any",
+  
+  //?K Deberia leerse a los usuarios de sus propios departamentos?
+  UBICACION_READ_OWN: "ubicacion:read:own",
+
   UBICACION_CREATE_ANY: "ubicacion:create:any",
   UBICACION_UPDATE_ANY: "ubicacion:update:any",
   UBICACION_DELETE_ANY: "ubicacion:update:any",
@@ -29,6 +33,9 @@ export const PERMISSIONS = {
 
   MANTENIMIENTO_CREATE_ANY: "mantenimiento:create:any",
   MANTENIMIENTO_CREATE_OWN:"mantenimiento:create:own",
+
+  //?K Deberia leerse a los usuarios de sus propios departamentos?
+  USUARIO_READ_OWN:"usuario:read:own",
 
   TRANSFERENCIA_CREATE_ANY: "transferencia:create:any",
   TRANSFERENCIA_CREATE_OWN:"transferencia:create:own",

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 import { z } from "zod"
+import { canCreateUbicacion, getReadUbicacionFilter } from "@/lib/policies/ubicacion.policy"
 
 const schema = z.object({
   nombre: z.string().min(1),
@@ -15,10 +16,10 @@ export async function GET(req: NextRequest) {
   if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
 
   const where: any = {}
-  if (session.user.rol !== "ADMIN" && session.user.departamentoId) {
-    where.departamentoId = session.user.departamentoId
+  where.departamentoId = getReadUbicacionFilter(session)
+  if (where.departamentoId === null) {
+    return NextResponse.json({error:"Sin permisos"},{status:403})
   }
-
   const ubicaciones = await prisma.ubicacion.findMany({
     where,
     orderBy: { nombre: "asc" },
@@ -33,7 +34,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
-  if (session.user.rol !== "ADMIN") return NextResponse.json({ error: "Sin permisos" }, { status: 403 })
+  if (!canCreateUbicacion(session)) return NextResponse.json({ error: "Sin permisos" }, { status: 403 })
 
   const body = await req.json()
   const parsed = schema.safeParse(body)

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 import { z } from "zod"
 import bcrypt from "bcryptjs"
+import { canCreateUsuario, getReadUsuariosFilter } from "@/lib/policies/usuarios.policy"
 
 const schema = z.object({
   nombre: z.string().min(1),
@@ -11,15 +12,22 @@ const schema = z.object({
   rol: z.enum(["ADMIN", "CONTABILIDAD", "CONSULTA"]).default("CONSULTA"),
   departamentoId: z.string().optional(),
 })
+
 export async function GET() {
   const session = await auth()
   if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
 
   const where: any = { activo: true }
-  
+
   // Si no es ADMIN, solo ve usuarios de su departamento
-  if (session.user.rol !== "ADMIN" && session.user.departamentoId) {
-    where.departamentoId = session.user.departamentoId
+  // if (session.user.rol !== "ADMIN" && session.user.departamentoId) {
+  //   where.departamentoId = session.user.departamentoId
+  // }
+
+  where.departamentoId = getReadUsuariosFilter(session)
+
+  if (where.departamentoId === null) {
+    return NextResponse.json({ error: "Sin permisos" }, { status: 403 })
   }
 
   const usuarios = await prisma.usuario.findMany({
@@ -32,14 +40,27 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
-  if (session.user.rol !== "ADMIN") return NextResponse.json({ error: "Sin permisos" }, { status: 403 })
-  
+  if (!canCreateUsuario(session)) {
+    return NextResponse.json({ error: "Sin permisos" }, { status: 403 })
+  }
+
   const body = await req.json()
   const parsed = schema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 400 })
 
   const passwordHash = await bcrypt.hash(parsed.data.password, 10)
 
+  const existingUser = await prisma.usuario.findUnique({
+    where: { email: body.email },
+  });
+
+  if (existingUser) {
+    return NextResponse.json(
+      { message: "El usuario ya existe" },
+      { status: 409 }
+    );
+  }
+  
   const usuario = await prisma.usuario.create({
     data: {
       nombre: parsed.data.nombre,
