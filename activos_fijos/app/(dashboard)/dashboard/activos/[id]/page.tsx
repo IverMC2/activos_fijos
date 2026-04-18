@@ -327,22 +327,44 @@ async function handleBaja() {
 
         {/* QR */}
         <TabsContent value="qr">
-          <Card>
-            <CardHeader><CardTitle className="text-base">Código QR del Activo</CardTitle></CardHeader>
-            <CardContent className="flex flex-col items-center gap-4 py-6">
-              <QRCode value={activo.codigo} size={200} />
-              <div className="text-center">
-                <p className="font-mono font-bold text-lg">{activo.codigo}</p>
-                <p className="text-slate-500">{activo.nombre}</p>
-              </div>
-              <Button
-                variant="outline"
-                onClick={() => window.print()}
-              >
-                Imprimir Etiqueta
-              </Button>
-            </CardContent>
-          </Card>
+         
+  <Card>
+    <CardHeader>
+      <CardTitle>Código QR del Activo</CardTitle>
+    </CardHeader>
+    <CardContent className="flex flex-col items-center gap-4">
+      <img
+        src={`/api/activos/${activo.codigo}/qr`}
+        alt={`QR ${activo.codigo}`}
+        className="w-72 h-72"
+      />
+      <p className="text-sm text-slate-600 text-center">
+        Escanea este código para ver la información pública del activo
+      </p>
+      <p className="text-xs text-slate-500 text-center">
+        URL: {process.env.NEXT_PUBLIC_URL}/activos/public/{activo.codigo}
+      </p>
+      <div className="flex gap-2">
+        <Button
+          onClick={() => {
+            const link = document.createElement("a")
+            link.href = `/api/activos/${activo.codigo}/qr`
+            link.download = `QR-${activo.codigo}.svg`
+            link.click()
+          }}
+        >
+          Descargar QR
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => window.print()}
+        >
+          Imprimir Etiqueta
+        </Button>
+      </div>
+    </CardContent>
+  </Card>
+
         </TabsContent>
         <TabsContent value="documentos">
   <Card>

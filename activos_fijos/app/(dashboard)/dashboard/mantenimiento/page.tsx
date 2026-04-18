@@ -159,33 +159,37 @@ export default function MantenimientoPage() {
   }, []);
 
   async function onSubmit(data: FormData) {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/mantenimientos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...data,
-          proveedorId: data.proveedorId || undefined,
-          proximaFecha: data.proximaFecha || undefined,
-        }),
-      });
-      if (!res.ok) {
-        toast.error("Error al guardar");
-        (res.text().then((algo:string)=>console.log(algo)
-        ))
-        return;
-      }
-      toast.success("Mantenimiento registrado");
-      form.reset();
-      setOpen(false);
-      cargar();
-    } catch {
-      toast.error("Error inesperado");
-    } finally {
-      setLoading(false);
+  setLoading(true)
+  try {
+    const res = await fetch("/api/mantenimientos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        activoId: data.activoId,
+        tipo: data.tipo,
+        descripcion: data.descripcion,
+        costo: data.costo ? Number(data.costo) : undefined,
+        fecha: data.fecha,
+        proximaFecha: data.proximaFecha || undefined,
+        proveedorId: data.proveedorId === "none" ? undefined : data.proveedorId,
+      }),
+    })
+    if (!res.ok) {
+      const error = await res.json()
+      console.error(error)
+      toast.error("Error al guardar")
+      return
     }
+    toast.success("Mantenimiento registrado")
+    form.reset()
+    setOpen(false)
+    cargar()
+  } catch {
+    toast.error("Error inesperado")
+  } finally {
+    setLoading(false)
   }
+}
 
   return (
     <div className="p-6 space-y-6">

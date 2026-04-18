@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 
+
 export const activoSchema = z.object({
   nombre: z.string().min(1, "Requerido"),
   descripcion: z.string().optional(),
@@ -125,6 +126,7 @@ export async function obtenerActivoPorId(id: string) {
   })
 }
 
+
 export async function crearActivo(data: unknown) {
   const parsed = activoSchema.safeParse(data)
   if (!parsed.success) {
@@ -139,6 +141,9 @@ export async function crearActivo(data: unknown) {
     codigo = generarCodigo()
     existe = await prisma.activo.findUnique({ where: { codigo } })
   }
+
+  // NO generamos QR aquí, se genera dinámicamente cuando se necesita
+  
   const activo = await prisma.activo.create({
     data: {
       codigo,
@@ -160,6 +165,7 @@ export async function crearActivo(data: unknown) {
       proveedorId: d.proveedorId || null,
     },
   })
+
 
   // ── Calcular depreciación histórica si la fecha de compra es pasada ──
   const hoy = new Date()
@@ -304,3 +310,5 @@ export async function getDepartamentoIdFromUbicacion(ubicacionId: string) {
 
   return ubicacion?.departamentoId ?? null
 }
+
+

@@ -178,6 +178,7 @@ async function main() {
     },
   });
 
+  
   for (let i = 0; i < CONFIG.USUARIOS; i++) {
     const nombre = faker.person.fullName();
     const email = faker.internet
